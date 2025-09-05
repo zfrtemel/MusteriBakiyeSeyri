@@ -1,0 +1,312 @@
+@model CustomerBalanceViewModel
+@{
+    ViewData["Title"] = $"{Model.CustomerTitle} - Detay";
+}
+
+<div class="container">
+    <div class="row mb-4">
+        <div class="col">
+            <h2>@Model.CustomerTitle - Müşteri Detayı</h2>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a asp-action="Index">Ana Sayfa</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">Müşteri Detayı</li>
+                </ol>
+            </nav>
+        </div>
+    </div>
+
+    @if (Model.HasData)
+    {
+        <div class="row mb-4">
+            <div class="col-md-12">
+                <div class="card border-primary">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0">
+                            <i class="fas fa-user"></i> @Model.CustomerTitle
+                            <span class="float-end">
+                                <small>Müşteri ID: @Model.CustomerId</small>
+                            </span>
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row text-center">
+                            <div class="col-md-4">
+                                <div class="border-end">
+                                    <h3 class="@(Model.BalanceData!.CurrentBalance >= 0 ? "text-success" : "text-danger")">
+                                        @Model.BalanceData.CurrentBalance.ToString("N2") ₺
+                                    </h3>
+                                    <p class="text-muted mb-0">Mevcut Bakiye</p>
+                                    <small class="@(Model.BalanceData.CurrentBalance >= 0 ? "text-success" : "text-danger")">
+                                        @(Model.BalanceData.CurrentBalance >= 0 ? "Alacaklı" : "Borçlu")
+                                    </small>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="border-end">
+                                    <h3 class="text-warning">@Model.BalanceData.MaximumDebt.ToString("N2") ₺</h3>
+                                    <p class="text-muted mb-0">Maksimum Borç Tutarı</p>
+                                    <small class="text-warning">En Yüksek Borç</small>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <h3 class="text-info">@Model.BalanceData.MaximumDebtDate.ToString("dd.MM.yyyy")</h3>
+                                <p class="text-muted mb-0">Maksimum Borç Tarihi</p>
+                                <small class="text-info">@Model.BalanceData.MaximumDebtDate.ToString("dddd", new System.Globalization.CultureInfo("tr-TR"))</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row mb-4">
+            <div class="col-md-8">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">Bakiye Seyri</h5>
+                        <div style="height: 300px; position: relative;">
+                            <canvas id="balanceChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">İstatistikler</h5>
+                        <ul class="list-group list-group-flush">
+                            <li class="list-group-item d-flex justify-content-between">
+                                <span>Toplam İşlem Günü:</span>
+                                <strong>@Model.BalanceData.DailyBalances.Count</strong>
+                            </li>
+                            <li class="list-group-item d-flex justify-content-between">
+                                <span>Toplam İşlem:</span>
+                                <strong>@Model.BalanceData.DailyBalances.Sum(d => d.Transactions.Count)</strong>
+                            </li>
+                            <li class="list-group-item d-flex justify-content-between">
+                                <span>Fatura İşlemleri:</span>
+                                <strong>@Model.BalanceData.DailyBalances.Sum(d => d.Transactions.Count(t => t.Type == "Invoice"))</strong>
+                            </li>
+                            <li class="list-group-item d-flex justify-content-between">
+                                <span>Ödeme İşlemleri:</span>
+                                <strong>@Model.BalanceData.DailyBalances.Sum(d => d.Transactions.Count(t => t.Type == "Payment"))</strong>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">Son İşlemler</h5>
+                        <div class="table-responsive">
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>Tarih</th>
+                                        <th>İşlem Tipi</th>
+                                        <th>Tutar</th>
+                                        <th>Gün Sonu Bakiye</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var daily in Model.BalanceData.DailyBalances.OrderByDescending(x => x.Date).Take(10))
+                                    {
+                                        @foreach (var transaction in daily.Transactions.OrderBy(t => t.Type))
+                                        {
+                                            <tr>
+                                                <td>@daily.Date.ToString("dd.MM.yyyy")</td>
+                                                <td>
+                                                    @if (transaction.Type == "Invoice")
+                                                    {
+                                                        <span class="badge bg-warning text-dark">Fatura</span>
+                                                    }
+                                                    else
+                                                    {
+                                                        <span class="badge bg-success">Ödeme</span>
+                                                    }
+                                                </td>
+                                                <td class="@(transaction.Amount >= 0 ? "text-danger" : "text-success")">
+                                                    @transaction.Amount.ToString("N2") ₺
+                                                </td>
+                                                <td class="@(daily.Balance >= 0 ? "text-success" : "text-danger")">
+                                                    @daily.Balance.ToString("N2") ₺
+                                                </td>
+                                            </tr>
+                                        }
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    @if (Model.HasData && Model.BalanceData!.DailyBalances.Any())
+    {
+        <script>
+            const ctx = document.getElementById('balanceChart');
+            let rawBalanceData = @Html.Raw(Json.Serialize(Model.BalanceData.DailyBalances.Select(x => new { 
+                date = x.Date.ToString("dd.MM.yyyy"), 
+                balance = x.Balance.ToString("F2", System.Globalization.CultureInfo.InvariantCulture)
+            })));
+
+            const maxDebtDate = '@Model.BalanceData.MaximumDebtDate.ToString("dd.MM.yyyy")';
+            const maxDebtAmount = @Model.BalanceData.MaximumDebt.ToString("F2", System.Globalization.CultureInfo.InvariantCulture);
+
+            // Büyük veri setlerinde performans için veri azaltma
+            function optimizeDataForChart(data, maxPoints = 100) {
+                if (data.length <= maxPoints) return data;
+                
+                const step = Math.ceil(data.length / maxPoints);
+                const optimizedData = [];
+                
+                // İlk ve son noktaları her zaman dahil et
+                optimizedData.push(data[0]);
+                
+                // Maksimum borç tarihini her zaman dahil et
+                const maxDebtIndex = data.findIndex(x => x.date === maxDebtDate);
+                if (maxDebtIndex > 0) optimizedData.push(data[maxDebtIndex]);
+                
+                // Belirli aralıklarla veri noktalarını al
+                for (let i = step; i < data.length - 1; i += step) {
+                    if (i !== maxDebtIndex) optimizedData.push(data[i]);
+                }
+                
+                // Son noktayı ekle
+                if (data.length > 1) optimizedData.push(data[data.length - 1]);
+                
+                // Tarihe göre sırala
+                return optimizedData.sort((a, b) => new Date(a.date.split('.').reverse().join('-')) - new Date(b.date.split('.').reverse().join('-')));
+            }
+
+            // Veri optimizasyonu uygula
+            const balanceData = optimizeDataForChart(rawBalanceData);
+
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: balanceData.map(x => x.date),
+                    datasets: [{
+                        label: 'Günlük Bakiye (₺)',
+                        data: balanceData.map(x => parseFloat(x.balance)),
+                        borderColor: 'rgb(75, 192, 192)',
+                        backgroundColor: 'rgba(75, 192, 192, 0.1)',
+                        tension: 0.2,
+                        fill: true,
+                        pointRadius: 2,
+                        pointHoverRadius: 6,
+                        pointBackgroundColor: balanceData.map(x => x.date === maxDebtDate ? '#dc3545' : 'rgb(75, 192, 192)'),
+                        pointBorderColor: balanceData.map(x => x.date === maxDebtDate ? '#dc3545' : 'rgb(75, 192, 192)'),
+                        pointBorderWidth: balanceData.map(x => x.date === maxDebtDate ? 3 : 1)
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    animation: {
+                        duration: rawBalanceData.length > 50 ? 0 : 750 // Büyük veri setlerinde animasyonu kapat
+                    },
+                    interaction: {
+                        intersect: false,
+                        mode: 'index'
+                    },
+                    elements: {
+                        line: {
+                            borderWidth: 2
+                        },
+                        point: {
+                            hoverRadius: 6,
+                            hitRadius: 10
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: false,
+                            title: {
+                                display: true,
+                                text: 'Bakiye (₺)',
+                                font: {
+                                    size: 12,
+                                    weight: 'bold'
+                                }
+                            },
+                            ticks: {
+                                maxTicksLimit: 8, // Y ekseni tick sayısını sınırla
+                                callback: function(value) {
+                                    return new Intl.NumberFormat('tr-TR', { 
+                                        style: 'currency', 
+                                        currency: 'TRY',
+                                        notation: 'compact' // Büyük sayıları kısalt (1.2M vs 1.200.000)
+                                    }).format(value);
+                                }
+                            }
+                        },
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Tarih',
+                                font: {
+                                    size: 12,
+                                    weight: 'bold'
+                                }
+                            },
+                            ticks: {
+                                maxTicksLimit: 10, // X ekseni tick sayısını sınırla
+                                maxRotation: 45,
+                                minRotation: 0
+                            }
+                        }
+                    },
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: '@Model.CustomerTitle - Bakiye Seyri',
+                            font: {
+                                size: 16,
+                                weight: 'bold'
+                            }
+                        },
+                        legend: {
+                            display: true,
+                            position: 'top'
+                        },
+                        tooltip: {
+                            enabled: true,
+                            mode: 'index',
+                            intersect: false,
+                            callbacks: {
+                                title: function(context) {
+                                    return 'Tarih: ' + context[0].label;
+                                },
+                                label: function(context) {
+                                    let label = 'Bakiye: ' + new Intl.NumberFormat('tr-TR', { 
+                                        style: 'currency', 
+                                        currency: 'TRY'
+                                    }).format(context.parsed.y);
+                                    
+                                    if (context.label === maxDebtDate) {
+                                        label += ' 🔴 (Maksimum Borç Tarihi)';
+                                    }
+                                    
+                                    return label;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+        </script>
+    }
+}

@@ -1,0 +1,274 @@
+@model CustomerBalanceViewModel
+@{
+    ViewData["Title"] = "Müşteri Bakiye Seyri";
+}
+
+<div class="container">
+    <div class="row mb-4">
+        <div class="col">
+            <h2>Müşteri Bakiye Seyri</h2>
+        </div>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Müşteri ve Tarih Seçimi</h5>
+                    <form method="get" asp-action="Index">
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="form-group mb-3">
+                                    <label for="customerId">Müşteri</label>
+                                    <select class="form-control" id="customerId" name="customerId">
+                                        <option value="">Müşteri Seçiniz...</option>
+                                        @foreach (var customer in Model.Customers)
+                                        {
+                                            <option value="@customer.Id" selected="@(customer.Id == Model.CustomerId)">
+                                                @customer.Title
+                                            </option>
+                                        }
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="form-group mb-3">
+                                    <label for="startDate">Başlangıç Tarihi</label>
+                                    <input type="date" class="form-control" id="startDate" name="startDate" 
+                                           value="@(Model.StartDate?.ToString("yyyy-MM-dd"))" />
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="form-group mb-3">
+                                    <label for="endDate">Bitiş Tarihi</label>
+                                    <input type="date" class="form-control" id="endDate" name="endDate" 
+                                           value="@(Model.EndDate?.ToString("yyyy-MM-dd"))" />
+                                </div>
+                            </div>
+                            <div class="col-md-2">
+                                <div class="form-group mb-3">
+                                    <label>&nbsp;</label>
+                                    <button type="submit" class="btn btn-primary d-block w-100">Göster</button>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @if (Model.HasData)
+    {
+        <div class="row mb-4">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">Müşteri Bilgileri</h5>
+                        <p><strong>Ünvan:</strong> @Model.CustomerTitle</p>
+                        <p><strong>Mevcut Bakiye:</strong> @Model.BalanceData!.CurrentBalance.ToString("N2") ₺</p>
+                        <p><strong>Maksimum Borç:</strong> @Model.BalanceData.MaximumDebt.ToString("N2") ₺</p>
+                        <p><strong>Maksimum Borç Tarihi:</strong> @Model.BalanceData.MaximumDebtDate.ToString("dd.MM.yyyy")</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">İstatistikler</h5>
+                        <p><strong>Toplam İşlem Günü:</strong> @Model.BalanceData.DailyBalances.Count</p>
+                        <p><strong>Analiz Dönemi:</strong> 
+                            @if (Model.StartDate.HasValue && Model.EndDate.HasValue)
+                            {
+                                @($"{Model.StartDate:dd.MM.yyyy} - {Model.EndDate:dd.MM.yyyy}")
+                            }
+                            else
+                            {
+                                @("Tüm dönem")
+                            }
+                        </p>
+                        <div class="mt-3">
+                            <a asp-action="Details" asp-route-id="@Model.CustomerId" class="btn btn-info">
+                                Detaylı Görünüm
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">Bakiye Seyri Grafiği</h5>
+                        <div style="height: 250px; position: relative;">
+                            <canvas id="balanceChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        @if (Model.BalanceData.DailyBalances.Any())
+        {
+            <div class="row mt-4">
+                <div class="col">
+                    <div class="card">
+                        <div class="card-body">
+                            <h5 class="card-title">Günlük Bakiye Detayları</h5>
+                            <div class="table-responsive">
+                                <table class="table table-striped">
+                                    <thead>
+                                        <tr>
+                                            <th>Tarih</th>
+                                            <th>Bakiye</th>
+                                            <th>İşlem Sayısı</th>
+                                            <th>İşlemler</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach (var daily in Model.BalanceData.DailyBalances.OrderBy(x => x.Date))
+                                        {
+                                            <tr>
+                                                <td>@daily.Date.ToString("dd.MM.yyyy")</td>
+                                                <td class="@(daily.Balance >= 0 ? "text-success" : "text-danger")">
+                                                    @daily.Balance.ToString("N2") ₺
+                                                </td>
+                                                <td>@daily.Transactions.Count</td>
+                                                <td>
+                                                    @foreach (var transaction in daily.Transactions)
+                                                    {
+                                                        <small class="badge @(transaction.Type == "Invoice" ? "bg-warning" : "bg-success") me-1">
+                                                            @(transaction.Type== "Invoice" ? "Fatura" : "Ödeme"): @transaction.Amount.ToString("N2") ₺
+                                                        </small>
+                                                    }
+                                                </td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+    }
+</div>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    @if (Model.HasData && Model.BalanceData!.DailyBalances.Any())
+    {
+        <script>
+            const ctx = document.getElementById('balanceChart');
+            let rawBalanceData = @Html.Raw(Json.Serialize(Model.BalanceData.DailyBalances.Select(x => new { 
+                date = x.Date.ToString("dd.MM.yyyy"), 
+                balance = x.Balance.ToString("F2", System.Globalization.CultureInfo.InvariantCulture)
+            })));
+
+            // Performans için veri optimizasyonu (Index sayfası için daha az nokta)
+            function optimizeDataForChart(data, maxPoints = 50) {
+                if (data.length <= maxPoints) return data;
+                
+                const step = Math.ceil(data.length / maxPoints);
+                const optimizedData = [];
+                
+                // İlk ve son noktaları dahil et
+                optimizedData.push(data[0]);
+                
+                for (let i = step; i < data.length - 1; i += step) {
+                    optimizedData.push(data[i]);
+                }
+                
+                if (data.length > 1) optimizedData.push(data[data.length - 1]);
+                
+                return optimizedData.sort((a, b) => new Date(a.date.split('.').reverse().join('-')) - new Date(b.date.split('.').reverse().join('-')));
+            }
+
+            const balanceData = optimizeDataForChart(rawBalanceData);
+
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: balanceData.map(x => x.date),
+                    datasets: [{
+                        label: 'Günlük Bakiye (₺)',
+                        data: balanceData.map(x => parseFloat(x.balance)),
+                        borderColor: 'rgb(75, 192, 192)',
+                        backgroundColor: 'rgba(75, 192, 192, 0.1)',
+                        tension: 0.2,
+                        fill: true,
+                        pointRadius: 1,
+                        pointHoverRadius: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    animation: {
+                        duration: rawBalanceData.length > 30 ? 0 : 500
+                    },
+                    interaction: {
+                        intersect: false,
+                        mode: 'index'
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: false,
+                            title: {
+                                display: true,
+                                text: 'Bakiye (₺)'
+                            },
+                            ticks: {
+                                maxTicksLimit: 6,
+                                callback: function(value) {
+                                    return new Intl.NumberFormat('tr-TR', { 
+                                        style: 'currency', 
+                                        currency: 'TRY',
+                                        notation: 'compact'
+                                    }).format(value);
+                                }
+                            }
+                        },
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Tarih'
+                            },
+                            ticks: {
+                                maxTicksLimit: 8,
+                                maxRotation: 45
+                            }
+                        }
+                    },
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: '@Model.CustomerTitle Bakiye Seyri'
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return 'Bakiye: ' + new Intl.NumberFormat('tr-TR', { 
+                                        style: 'currency', 
+                                        currency: 'TRY' 
+                                    }).format(context.parsed.y);
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+
+            // Veri azaltma bilgisi (sadece önemli durumlarda göster)
+            if (rawBalanceData.length > 100 && rawBalanceData.length !== balanceData.length) {
+                const infoDiv = document.createElement('div');
+                infoDiv.className = 'alert alert-info mt-2';
+                infoDiv.innerHTML = `<small><i class="fas fa-chart-line"></i> ${rawBalanceData.length} veri noktasından ${balanceData.length} tanesi gösteriliyor. <a href="/Customer/Details/@Model.CustomerId" class="alert-link">Detaylı görünüm için tıklayın</a>.</small>`;
+                ctx.parentNode.appendChild(infoDiv);
+            }
+        </script>
+    }
+}

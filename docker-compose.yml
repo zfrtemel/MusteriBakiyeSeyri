@@ -1,0 +1,53 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:16-alpine
+    container_name: musteribakiyeseyri-db
+    environment:
+      POSTGRES_DB: MusteriBakiyeSeyri
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: Admin123!
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d MusteriBakiyeSeyri"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ASP.NET Core Web Application
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: musteribakiyeseyri-web
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ASPNETCORE_URLS=http://+:8080
+      - ConnectionStrings__DefaultConnection=Host=postgres;Database=MusteriBakiyeSeyri;Username=postgres;Password=Admin123!;Port=5432
+      - ASPNETCORE_FORWARDEDHEADERS_ENABLED=true
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - app-network
+    restart: unless-stopped
+    volumes:
+      - ./logs:/app/logs
+
+volumes:
+  postgres_data:
+    driver: local
+
+networks:
+  app-network:
+    driver: bridge

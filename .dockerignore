@@ -1,0 +1,47 @@
+# .dockerignore
+
+# Build outputs
+**/bin/
+**/obj/
+**/out/
+
+# IDE files
+.vs/
+.vscode/
+*.user
+*.suo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+logs/
+*.log
+
+# NuGet
+packages/
+*.nupkg
+
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# Documentation
+*.md
+!README.md
+
+# Test results
+TestResults/
+*.trx
+*.coverage
+
+# Docker files (except the ones we need)
+docker-compose.override.yml
+docker-compose.vs.debug.yml
+docker-compose.vs.release.yml
+
+# Temporary files
+*.tmp
+*.temp
